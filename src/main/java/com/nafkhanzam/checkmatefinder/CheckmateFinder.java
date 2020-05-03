@@ -4,6 +4,7 @@ import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveGenerator;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
+import com.github.bhlangonijr.chesslib.move.MoveList;
 
 public class CheckmateFinder {
     private Board board;
@@ -14,14 +15,14 @@ public class CheckmateFinder {
 
     public Answer findAnswer(int depth) throws MoveGeneratorException {
         Answer answer = new Answer();
-        _answerMove(answer, depth, true);
+        _answerMove(answer, depth);
         return answer;
     }
 
-    private boolean _answerMove(Answer answer, int depth, boolean root) throws MoveGeneratorException {
+    private boolean _answerMove(Answer answer, int depth) throws MoveGeneratorException {
         for (Move move : MoveGenerator.generateLegalMoves(board)) {
             board.doMove(move);
-            boolean found = depth > 1 ? _opponentMove(answer, depth) : board.isMated();
+            boolean found = _opponentMove(answer, depth);
             board.undoMove();
             if (found) {
                 answer.setAnswerMove(move);
@@ -32,13 +33,16 @@ public class CheckmateFinder {
     }
 
     private boolean _opponentMove(Answer answer, int depth) throws MoveGeneratorException {
-        if (_noAvailableMove()) {
+        MoveList availableMoves = MoveGenerator.generateLegalMoves(board);
+        if (availableMoves.size() == 0) {
             return board.isKingAttacked();
+        } else if (depth == 1) {
+            return false;
         }
-        for (Move move : MoveGenerator.generateLegalMoves(board)) {
+        for (Move move : availableMoves) {
             board.doMove(move);
             Answer next = new Answer();
-            boolean found = _answerMove(next, depth - 1, false);
+            boolean found = _answerMove(next, depth - 1);
             board.undoMove();
             if (!found) {
                 return false;
@@ -46,10 +50,6 @@ public class CheckmateFinder {
             answer.putAnswer(move, next);
         }
         return true;
-    }
-
-    private boolean _noAvailableMove() throws MoveGeneratorException {
-        return MoveGenerator.generateLegalMoves(board).size() == 0;
     }
 
 }

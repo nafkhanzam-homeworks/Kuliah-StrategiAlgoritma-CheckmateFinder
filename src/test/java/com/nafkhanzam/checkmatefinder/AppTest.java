@@ -3,12 +3,33 @@
  */
 package com.nafkhanzam.checkmatefinder;
 
+import static org.junit.Assert.assertEquals;
+
+import java.util.Arrays;
+import java.util.Collection;
+
 import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.Side;
+import com.github.bhlangonijr.chesslib.move.Move;
+import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class AppTest {
+
+    @Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][] {
+                { "3qr2k/pbpp2pp/1p5N/3Q2b1/2P1P3/P7/1PP2PPP/R4RK1 w - - 0 1", "d5g8 e8g8 h6f7".split(" ") },
+                { "r1bq2k1/ppp2r1p/2np1pNQ/2bNpp2/2B1P3/3P4/PPP2PPP/R3K2R w KQ - 0 1",
+                        "d5f6 d8f6 h6f8".split(" ") }, });
+    }
 
     private Board board;
 
@@ -17,8 +38,27 @@ public class AppTest {
         board = new Board();
     }
 
-    @Test
-    public void testPuzzle1() {
+    @Parameter
+    public String fen;
 
+    @Parameter(1)
+    public String[] moves;
+
+    @Test
+    public void testPuzzle() throws MoveGeneratorException {
+        board.loadFromFen(fen);
+        CheckmateFinder finder = new CheckmateFinder(board);
+        Answer answer = finder.findAnswer((moves.length + 1) / 2);
+        Side ansSide = board.getSideToMove();
+        for (String movestr : moves) {
+            Move move = new Move(movestr, board.getSideToMove());
+            if (ansSide == board.getSideToMove()) {
+                assertEquals(move, answer.getAnswerMove());
+            } else {
+                answer = answer.getNextAnswer(move);
+            }
+            board.doMove(move);
+        }
+        assertEquals(true, board.isMated());
     }
 }

@@ -1,46 +1,90 @@
 package com.nafkhanzam.checkmatefinder;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.Scanner;
 
 import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.BoardEvent;
+import com.github.bhlangonijr.chesslib.BoardEventType;
+import com.github.bhlangonijr.chesslib.MoveBackup;
+import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 
 public class App {
-    public static void main(String[] args) throws MoveGeneratorException {
-        Board board = new Board();
-        board.loadFromFen("8/8/8/8/1Q6/1K6/8/2Nk5 w - - 0 0"); // 1
-        // board.loadFromFen("8/8/5R2/8/2P1k3/2K5/5P2/2B5 w - - 0 0"); // 2
-        // board.loadFromFen("5b1k/7p/4QK2/2qN3R/2B3p1/7r/8/8 w - - 0 0"); // 7532
-        // board.loadFromFen("5k2/5p1r/3Kn3/2pb1q2/Q7/5pR1/3n3P/4R3 w - - 0 0"); // ?
-        // board.loadFromFen("8/3b3p/5k2/2R5/8/3QP1K1/6P1/8 w - - 0 0"); // ?
-        CheckmateFinder finder = new CheckmateFinder(board);
-        long time = System.currentTimeMillis();
-        Answer answer = finder.findAnswer(2);
-        time = System.currentTimeMillis() - time;
 
-        if (answer.end()) {
-            System.out.println("Answer cannot be found!");
-        } else {
-            System.out.printf("Answer found in %dms.\n", time);
-            try (Scanner in = new Scanner(System.in)) {
+    private static class AnswerTime {
+        public final Board board;
+        public final Answer answer;
+        public final long timeInMs;
+
+        public AnswerTime(Board board, Answer answer, long timeInMs) {
+            this.board = board;
+            this.answer = answer;
+            this.timeInMs = timeInMs;
+        }
+    }
+
+    private static void writeMove(Writer writer, BoardEvent e) {
+        try {
+            Move move = null;
+            if (e instanceof MoveBackup) {
+                MoveBackup mb = (MoveBackup) e;
+                move = mb.getMove();
+            } else if (e instanceof Move) {
+                move = (Move) e;
+            }
+            writer.append(move.toString()).append('\n');
+        } catch (IOException | NullPointerException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static AnswerTime getAnswer(String fen, int depth) throws MoveGeneratorException, IOException {
+        Board board = new Board();
+        board.loadFromFen(fen);
+        Writer writer = new FileWriter(new File("output_moves.txt"));
+        board.addEventListener(BoardEventType.ON_MOVE, e -> App.writeMove(writer, e));
+        board.addEventListener(BoardEventType.ON_UNDO_MOVE, e -> App.writeMove(writer, e));
+        CheckmateFinder finder = new CheckmateFinder(board);
+        long timeInMs = System.currentTimeMillis();
+        Answer answer = finder.findAnswer(depth);
+        timeInMs = System.currentTimeMillis() - timeInMs;
+        writer.close();
+        return new AnswerTime(board, answer, timeInMs);
+    }
+
+    public static void main(String[] args) throws MoveGeneratorException, IOException {
+        try (Scanner in = new Scanner(System.in)) {
+            System.out.print("Number of moves: ");
+            int depth = Integer.parseInt(in.nextLine());
+            System.out.print("Chess board state in FEN: ");
+            String fen = in.nextLine();
+            AnswerTime ans = getAnswer(fen, depth);
+            Board board = ans.board;
+            Answer answer = ans.answer;
+            if (answer.end()) {
+                System.out.println("Answer cannot be found!");
+            } else {
+                System.out.printf("Answer found in %dms.\n", ans.timeInMs);
+                Side side = board.getSideToMove();
                 while (!answer.end()) {
                     Move answerMove = answer.getAnswerMove();
                     System.out.printf("Move %s!\n", answerMove);
-                    board.doMove(answerMove);
 
                     System.out.printf("Opponent's move: ");
-                    Move move = new Move(in.nextLine(), board.getSideToMove());
-                    System.out.println();
+                    Move move = new Move(in.nextLine(), side);
 
                     answer = answer.getNextAnswer(move);
-                    board.doMove(move);
+                    side = Side.values()[(side.ordinal() + 1) % 2];
                 }
                 System.out.printf("Move %s and checkmate!\n", answer.getAnswerMove());
-            } catch (Exception e) {
-                e.printStackTrace();
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
     }
 }
