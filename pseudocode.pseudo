@@ -1,5 +1,3 @@
-// https://www.chess.com/forum/view/more-puzzles/300-checkmate-puzzles-puzzles-1---50
-// https://www.dailychess.com/chess-puzzles/chess-puzzle-solve.php
 function getAnswerMove(numberOfMoves: integer) do
     foreach (move in all legal moves as answer move candidates) do
         execute move to the board
@@ -15,7 +13,7 @@ end
 
 function isOpponentCannotEscape(numberOfMoves: integer) do
     if (no legal move available) do
-        // Either stale mate or check mate, return true if check mate, false if stale mate
+        // Either stalemate or checkmate, return true if checkmate, false if stalemate
         return is opponent move attacked
     end else if (numberOfMoves = 1) do
         // Opponent can escape in the given number of moves

@@ -43,12 +43,20 @@ public class App {
         }
     }
 
+    private static void writeBacktrack(Writer writer) {
+        try {
+            writer.append("BACKTRACK").append('\n');
+        } catch (IOException | NullPointerException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     public static AnswerTime getAnswer(String fen, int depth) throws MoveGeneratorException, IOException {
         Board board = new Board();
         board.loadFromFen(fen);
         Writer writer = new FileWriter(new File("output_moves.txt"));
         board.addEventListener(BoardEventType.ON_MOVE, e -> App.writeMove(writer, e));
-        board.addEventListener(BoardEventType.ON_UNDO_MOVE, e -> App.writeMove(writer, e));
+        board.addEventListener(BoardEventType.ON_UNDO_MOVE, e -> App.writeBacktrack(writer));
         CheckmateFinder finder = new CheckmateFinder(board);
         long timeInMs = System.currentTimeMillis();
         Answer answer = finder.findAnswer(depth);
